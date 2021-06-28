@@ -1,0 +1,97 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <div class="container-fluid">
+        <h2>Listing: {{ listing.name }}</h2>
+        {% if user.is_authenticated %}
+            {% if request.user != listing.creator and not listing.closed %}
+                {% if listing not in watchlist %}
+                    <a href="{% url 'add_to_watchlist' listing.name %}">Add to Watchlist</a>
+                {% else %}
+                    <a href="{% url 'add_to_watchlist' listing.name %}">Remove from Watchlist</a>
+                {% endif %}
+                <br>
+            {% endif %}
+        {% endif %}
+        <br>
+        <div class="row">
+            <div class="col-3">
+                {% if listing.photo %}
+                    <img src="{{ MEDIA_URL }} {{ listing.photo.url }}" class="img-fluid">
+                {% else %}
+                    No photo provided.
+                {% endif %}
+            </div>
+            <div class="col">
+                {% if listing.description %}
+                    <h5>Description: {{ listing.description }}</h5>
+                {% endif %}
+                {% if listing.category.name != "None" %}
+                    Category: {{ listing.category.name }}<br>
+                {% endif %}
+                Created on {{ listing.date_created }} by <strong>{{ listing.creator.username }}</strong>
+                <br><br><br>
+                {% if listing.current_bid.amount %}
+                    {% if listing.closed %}
+                        <h4>${{ listing.current_bid.amount }}</h4>
+                        Final bid placed by: <strong>{{ listing.current_bid.user.username }}</strong>
+                        <br>
+                        Initially was: ${{ listing.initial_price }}
+                        <br>
+                    {% else %}
+                        <h4> Current bid: ${{ listing.current_bid.amount }}</h4>
+                        Placed by: <strong>{{ listing.current_bid.user.username }}</strong>
+                        <br>
+                        Initially was: ${{ listing.initial_price }}
+                        <br>
+                    {% endif %}
+                {% else %}
+                    <h4>Starting at: ${{ listing.initial_price }}</h4>
+                {% endif %}
+                {% if not listing.closed %}
+                    {% if user.is_authenticated %}
+                        {% if request.user != listing.creator %}
+                            <form action="{% url 'bid' listing.name %}" method="POST">
+                                {% csrf_token %}
+                                <input type="text" id="bid" name="bid" placeholder="Place your bid here...">
+                                <button type="submit">Place bid</button>
+                            </form>
+                        {% else %}
+                            <a href="{% url 'close_listing' listing.name %}">Close Listing</a>
+                        {% endif %}
+                        {% if message %}
+                            <br><br>
+                            <strong>{{ message }}</strong>
+                        {% endif %}
+                    {% endif %}
+                {% else %}
+                    <br>
+                    <h3>Listing closed!</h3>
+                    {% if request.user == listing.current_bid.user %}
+                        <h5>You are the winner of this auction!</h5>
+                    {% else %}
+                        <h5>{{ listing.current_bid.user.username }} is the winner of this auction!</h5>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row mt-5">
+            <h3>Comments:</h3>
+        </div>
+        {% if user.is_authenticated and not listing.closed %}
+            <div class="row">
+                <form action="{% url 'comment' listing.name %}" method="POST">
+                    {% csrf_token %}
+                    <input type="text" id="comment" name="comment" placeholder="Comment here...">
+                    <button type="submit">Comment</button>
+                </form>
+            </div>
+            <br>
+        {% endif %}
+        {% for comment in comments %}
+            <div class="row">
+                <pre class="tab"><strong>{{ comment.user.username }}:</strong> "{{ comment.comment }}" - posted on {{ comment.date_posted }}</pre>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
